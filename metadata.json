@@ -1,0 +1,10 @@
+{
+  "name": "Spades Is My Lingo: Elite Plus",
+  "description": "An elite full-stack Spades tournament deck with Gemini AI strategy coaches, live announcer commentary, interactive Google Maps rooms, lucky wheels, daily sweepstakes rewards, and simulated ad monetization.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

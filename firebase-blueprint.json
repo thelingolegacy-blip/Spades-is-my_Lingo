@@ -1,0 +1,138 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "The user's central profile containing Spades progression, coins, tickets, level, and cosmetic unlocks.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase user identifier."
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Chosen user name or handle."
+        },
+        "avatarId": {
+          "type": "string",
+          "description": "Currently active avatar skin identifier."
+        },
+        "themeId": {
+          "type": "string",
+          "description": "Currently active visual app theme."
+        },
+        "deckStyle": {
+          "type": "string",
+          "description": "Currently active card deck skin style."
+        },
+        "purchasedDecks": {
+          "type": "array",
+          "description": "List of unlocked or purchased card deck styles."
+        },
+        "chips": {
+          "type": "number",
+          "description": "User's current coin / chip balance."
+        },
+        "sweepstakesTickets": {
+          "type": "number",
+          "description": "Count of available sweepstakes tickets."
+        },
+        "xp": {
+          "type": "number",
+          "description": "User's progression experience points."
+        },
+        "level": {
+          "type": "number",
+          "description": "User's current level."
+        },
+        "activeSweepstakesEntries": {
+          "type": "number",
+          "description": "Number of sweepstakes tickets entered in the current pool."
+        },
+        "streakDays": {
+          "type": "number",
+          "description": "Consecutive days logged in."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of last modification."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of creation."
+        }
+      },
+      "required": ["uid", "email", "chips", "level", "updatedAt"]
+    },
+    "TrackerSession": {
+      "title": "TrackerSession",
+      "description": "The historical record of a physical or manual Spades game scorekeeper session.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique session identifier."
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of the user who recorded the session."
+        },
+        "teamAName": {
+          "type": "string",
+          "description": "Name of the first partnership team."
+        },
+        "teamAScore": {
+          "type": "number",
+          "description": "Current total score for Team A."
+        },
+        "teamABags": {
+          "type": "number",
+          "description": "Current accumulated bags for Team A."
+        },
+        "teamBName": {
+          "type": "string",
+          "description": "Name of the second partnership team."
+        },
+        "teamBScore": {
+          "type": "number",
+          "description": "Current total score for Team B."
+        },
+        "teamBBags": {
+          "type": "number",
+          "description": "Current accumulated bags for Team B."
+        },
+        "winningScore": {
+          "type": "number",
+          "description": "Target score to win (e.g., 500)."
+        },
+        "rounds": {
+          "type": "array",
+          "description": "Historical list of completed bidding and trick score changes per round."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of last modification."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of creation."
+        }
+      },
+      "required": ["id", "userId", "teamAName", "teamBName", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores user statistics, preferences, progress, and unlockable card deck styles."
+    },
+    "/users/{userId}/sessions/{sessionId}": {
+      "schema": "TrackerSession",
+      "description": "Stores manual physical score tracker game sessions saved by the user."
+    }
+  }
+}
