@@ -45,7 +45,7 @@ test('owner cannot mutate wallet or progression fields directly', async () => {
   for (const [field, value] of [
     ['chips', 999999], ['sweepstakesTickets', 999], ['xp', 999999],
     ['level', 99], ['streakDays', 99], ['activeSweepstakesEntries', 99],
-    ['purchasedDecks', ['deck_classic', 'deck_gold']]
+    ['purchasedDecks', ['deck_classic', 'deck_gold']], ['deckStyle', 'deck_gold']
   ]) await assertFails(updateDoc(profile, { [field]: value }));
 });
 
