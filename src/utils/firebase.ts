@@ -155,8 +155,8 @@ export async function syncUserProfile(user: User, existingProgress?: SoloProgres
         displayName: stored.displayName || user.displayName || 'Spades Master',
         avatarId: stored.avatarId || existingAvatar || 'avatar_rookie',
         themeId: stored.themeId || existingTheme || 'theme_cyber',
-        deckStyle: stored.deckStyle || existingDeckStyle || 'deck_classic',
-        purchasedDecks: existingPurchasedDecks || ['deck_classic'],
+        deckStyle: 'deck_classic',
+        purchasedDecks: ['deck_classic'],
         updatedAt: stored.updatedAt || timestamp,
         createdAt: stored.createdAt || timestamp
       };
@@ -175,13 +175,13 @@ export async function syncUserProfile(user: User, existingProgress?: SoloProgres
       await setDoc(userDocRef, profilePreferences);
     }
 
-    return { ...profilePreferences, ...localProgress };
+    return { ...profilePreferences, ...localProgress, deckStyle: existingDeckStyle || 'deck_classic', purchasedDecks: existingPurchasedDecks || ['deck_classic'] };
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
-export type UserProfilePreferenceUpdates = Partial<Pick<UserProfileData, 'displayName' | 'avatarId' | 'themeId' | 'deckStyle'>>;
+export type UserProfilePreferenceUpdates = Partial<Pick<UserProfileData, 'displayName' | 'avatarId' | 'themeId'>>;
 
 // Update only non-economic user profile preferences.
 export async function updateUserProfile(uid: string, updates: UserProfilePreferenceUpdates): Promise<void> {
@@ -189,7 +189,7 @@ export async function updateUserProfile(uid: string, updates: UserProfilePrefere
   try {
     const docRef = doc(db, 'users', uid);
     const safeUpdates: Record<string, string> = { updatedAt: new Date().toISOString() };
-    for (const key of ['displayName', 'avatarId', 'themeId', 'deckStyle'] as const) {
+    for (const key of ['displayName', 'avatarId', 'themeId'] as const) {
       const value = updates[key];
       if (typeof value === 'string') safeUpdates[key] = value;
     }
