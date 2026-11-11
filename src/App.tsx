@@ -340,7 +340,7 @@ export default function App() {
           );
 
           if (profile) {
-            // Restore from Firebase
+            // Restore local progression returned by the preference sync adapter
             setSoloProgress({
               chips: profile.chips,
               sweepstakesTickets: profile.sweepstakesTickets,
@@ -369,20 +369,11 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Save Progress
+  // Save progression locally only. Firestore client writes to balances/tickets/XP/levels
+  // remain disabled until the server-authoritative wallet ledger is deployed and enabled.
   useEffect(() => {
     localStorage.setItem('spades_solo_progress_v1', JSON.stringify(soloProgress));
-    if (currentUser) {
-      updateUserProfile(currentUser.uid, {
-        chips: soloProgress.chips,
-        sweepstakesTickets: soloProgress.sweepstakesTickets,
-        xp: soloProgress.xp,
-        level: soloProgress.level,
-        activeSweepstakesEntries: soloProgress.activeSweepstakesEntries,
-        streakDays: soloProgress.streakDays
-      }).catch(err => console.error("Cloud progress sync failed:", err));
-    }
-  }, [soloProgress, currentUser]);
+  }, [soloProgress]);
 
   // Save Avatar Selection
   useEffect(() => {
