@@ -385,15 +385,10 @@ export default function App() {
     }
   }, [activeAvatar, currentUser]);
 
-  // Save Card Deck Style Selection
+  // Save card deck style locally. Unlock entitlements remain server-owned.
   useEffect(() => {
     localStorage.setItem('spades_active_deck_style_v1', activeDeckStyle);
-    if (currentUser) {
-      updateUserProfile(currentUser.uid, {
-        deckStyle: activeDeckStyle
-      }).catch(err => console.error("Cloud deck style sync failed:", err));
-    }
-  }, [activeDeckStyle, currentUser]);
+  }, [activeDeckStyle]);
 
   // Synchronize CSS custom properties with the active premium theme
   useEffect(() => {
@@ -417,8 +412,7 @@ export default function App() {
       setActiveDeckStyle(themeObj.cardBack);
       if (currentUser) {
         updateUserProfile(currentUser.uid, {
-          themeId: themeId,
-          deckStyle: themeObj.cardBack
+          themeId: themeId
         }).catch(err => console.error("Cloud theme sync failed:", err));
       }
     } else {
