@@ -15,7 +15,7 @@ service cloud.firestore {
         && data.displayName is string && data.displayName.size() <= 80
         && data.avatarId is string && data.avatarId.size() <= 64
         && data.themeId is string && data.themeId.size() <= 64
-        && data.deckStyle is string && data.deckStyle.size() <= 64
+        && data.deckStyle == 'deck_classic'
         && data.purchasedDecks is list && data.purchasedDecks.size() == 1
         && data.purchasedDecks[0] == 'deck_classic'
         && data.updatedAt is string && data.createdAt is string;
@@ -26,6 +26,8 @@ service cloud.firestore {
         && request.resource.data.avatarId is string && request.resource.data.avatarId.size() <= 64
         && request.resource.data.themeId is string && request.resource.data.themeId.size() <= 64
         && request.resource.data.deckStyle is string && request.resource.data.deckStyle.size() <= 64
+        && request.resource.data.purchasedDecks is list
+        && (request.resource.data.deckStyle == resource.data.deckStyle || request.resource.data.purchasedDecks.hasAny([request.resource.data.deckStyle]))
         && request.resource.data.updatedAt is string;
     }
     function validTrackerSession(data) {
