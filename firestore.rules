@@ -21,13 +21,10 @@ service cloud.firestore {
         && data.updatedAt is string && data.createdAt is string;
     }
     function validProfilePreferenceUpdate() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName','avatarId','themeId','deckStyle','updatedAt'])
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName','avatarId','themeId','updatedAt'])
         && request.resource.data.displayName is string && request.resource.data.displayName.size() <= 80
         && request.resource.data.avatarId is string && request.resource.data.avatarId.size() <= 64
         && request.resource.data.themeId is string && request.resource.data.themeId.size() <= 64
-        && request.resource.data.deckStyle is string && request.resource.data.deckStyle.size() <= 64
-        && request.resource.data.purchasedDecks is list
-        && (request.resource.data.deckStyle == resource.data.deckStyle || request.resource.data.purchasedDecks.hasAny([request.resource.data.deckStyle]))
         && request.resource.data.updatedAt is string;
     }
     function validTrackerSession(data) {
