@@ -167,7 +167,7 @@ export async function syncUserProfile(user: User, existingProgress?: SoloProgres
         displayName: user.displayName || 'Spades Master',
         avatarId: existingAvatar || 'avatar_rookie',
         themeId: existingTheme || 'theme_cyber',
-        deckStyle: existingDeckStyle || 'deck_classic',
+        deckStyle: 'deck_classic',
         purchasedDecks: ['deck_classic'],
         updatedAt: timestamp,
         createdAt: timestamp
