@@ -2,7 +2,7 @@
 
 ## Current security disposition
 
-Client writes to wallet balances, sweepstakes ticket counts, XP, levels, streaks, active entries, and purchased deck entitlements are denied by Firestore rules. The browser keeps the current practice/progression display in local storage only. This is a containment measure, not a completed cross-device wallet implementation.
+Client writes to wallet balances, sweepstakes ticket counts, XP, levels, streaks, active entries, and purchased deck entitlements are denied by Firestore rules. The browser keeps the current practice/progression display, deck-style selection, and unverified deck unlock display in local storage only. Firestore profile creation initializes only the default deck entitlement; client updates cannot change purchased-deck entitlements. This is a containment measure, not a completed cross-device wallet implementation.
 
 ## Required authoritative service
 
