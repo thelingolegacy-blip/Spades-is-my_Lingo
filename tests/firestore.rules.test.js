@@ -1,7 +1,7 @@
 import { before, after, beforeEach, test } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
 
 const projectId = 'demo-spades-wallet-rules';
 let testEnv;
@@ -75,4 +75,32 @@ test('new profile creation allows only the safe default profile schema', async (
     purchasedDecks: ['deck_classic'],
     updatedAt: '2026-11-11T00:00:00.000Z', createdAt: '2026-11-11T00:00:00.000Z'
   }));
+});
+
+
+test('session document ID must match the session payload ID', async () => {
+  const alice = testEnv.authenticatedContext('alice').firestore();
+  await assertFails(setDoc(doc(alice, 'users/alice/sessions/session-1'), {
+    id: 'different-session', userId: 'alice',
+    teamAName: 'A', teamAScore: 0, teamABags: 0,
+    teamBName: 'B', teamBScore: 0, teamBBags: 0,
+    winningScore: 500, rounds: [],
+    updatedAt: '2026-11-11T01:00:00.000Z',
+    createdAt: '2026-11-11T00:00:00.000Z'
+  }));
+});
+
+test('owner cannot delete a session with an invalid document ID', async () => {
+  await testEnv.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), 'users/alice/sessions/bad.id'), {
+      id: 'bad.id', userId: 'alice',
+      teamAName: 'A', teamAScore: 0, teamABags: 0,
+      teamBName: 'B', teamBScore: 0, teamBBags: 0,
+      winningScore: 500, rounds: [],
+      updatedAt: '2026-11-11T01:00:00.000Z',
+      createdAt: '2026-11-11T00:00:00.000Z'
+    });
+  });
+  const alice = testEnv.authenticatedContext('alice').firestore();
+  await assertFails(deleteDoc(doc(alice, 'users/alice/sessions/bad.id')));
 });
