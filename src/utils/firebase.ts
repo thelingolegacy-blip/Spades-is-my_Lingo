@@ -132,54 +132,68 @@ export interface UserProfileData {
   createdAt: string;
 }
 
-// Fetch or create user profile in Firestore
+// Fetch or create a preference-only user profile in Firestore.
+// Economic progression is local-only until the authoritative wallet API is deployed.
 export async function syncUserProfile(user: User, existingProgress?: SoloProgression, existingTheme?: string, existingAvatar?: string, existingDeckStyle?: string, existingPurchasedDecks?: string[]): Promise<UserProfileData | null> {
   const path = `users/${user.uid}`;
+  const timestamp = new Date().toISOString();
+  const localProgress: SoloProgression = existingProgress || {
+    chips: 2500, sweepstakesTickets: 3, xp: 120, level: 1,
+    activeSweepstakesEntries: 0, streakDays: 1
+  };
+
   try {
     const userDocRef = doc(db, 'users', user.uid);
     const userSnapshot = await getDoc(userDocRef);
+    let profilePreferences: Pick<UserProfileData, 'uid' | 'email' | 'displayName' | 'avatarId' | 'themeId' | 'deckStyle' | 'purchasedDecks' | 'updatedAt' | 'createdAt'>;
 
     if (userSnapshot.exists()) {
-      return userSnapshot.data() as UserProfileData;
+      const stored = userSnapshot.data() as Partial<UserProfileData>;
+      profilePreferences = {
+        uid: user.uid,
+        email: user.email || stored.email || '',
+        displayName: stored.displayName || user.displayName || 'Spades Master',
+        avatarId: stored.avatarId || existingAvatar || 'avatar_rookie',
+        themeId: stored.themeId || existingTheme || 'theme_cyber',
+        deckStyle: 'deck_classic',
+        purchasedDecks: ['deck_classic'],
+        updatedAt: stored.updatedAt || timestamp,
+        createdAt: stored.createdAt || timestamp
+      };
     } else {
-      // First-time registration with fallback defaults or provided parameters
-      const timestamp = new Date().toISOString();
-      const defaultProfile: UserProfileData = {
+      profilePreferences = {
         uid: user.uid,
         email: user.email || '',
         displayName: user.displayName || 'Spades Master',
         avatarId: existingAvatar || 'avatar_rookie',
         themeId: existingTheme || 'theme_cyber',
-        deckStyle: existingDeckStyle || 'deck_classic',
-        purchasedDecks: existingPurchasedDecks || ['deck_classic'],
-        chips: existingProgress?.chips ?? 2500,
-        sweepstakesTickets: existingProgress?.sweepstakesTickets ?? 3,
-        xp: existingProgress?.xp ?? 120,
-        level: existingProgress?.level ?? 1,
-        activeSweepstakesEntries: existingProgress?.activeSweepstakesEntries ?? 0,
-        streakDays: existingProgress?.streakDays ?? 1,
+        deckStyle: 'deck_classic',
+        purchasedDecks: ['deck_classic'],
         updatedAt: timestamp,
-        createdAt: timestamp,
+        createdAt: timestamp
       };
-
-      await setDoc(userDocRef, defaultProfile);
-      return defaultProfile;
+      await setDoc(userDocRef, profilePreferences);
     }
+
+    return { ...profilePreferences, ...localProgress, deckStyle: existingDeckStyle || 'deck_classic', purchasedDecks: existingPurchasedDecks || ['deck_classic'] };
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
-// Update User Profile attributes
-export async function updateUserProfile(uid: string, updates: Partial<UserProfileData>): Promise<void> {
+export type UserProfilePreferenceUpdates = Partial<Pick<UserProfileData, 'displayName' | 'avatarId' | 'themeId'>>;
+
+// Update only non-economic user profile preferences.
+export async function updateUserProfile(uid: string, updates: UserProfilePreferenceUpdates): Promise<void> {
   const path = `users/${uid}`;
   try {
     const docRef = doc(db, 'users', uid);
-    const timestamp = new Date().toISOString();
-    await updateDoc(docRef, {
-      ...updates,
-      updatedAt: timestamp
-    });
+    const safeUpdates: Record<string, string> = { updatedAt: new Date().toISOString() };
+    for (const key of ['displayName', 'avatarId', 'themeId'] as const) {
+      const value = updates[key];
+      if (typeof value === 'string') safeUpdates[key] = value;
+    }
+    if (Object.keys(safeUpdates).length > 1) await updateDoc(docRef, safeUpdates);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }

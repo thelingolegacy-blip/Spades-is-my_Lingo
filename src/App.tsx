@@ -340,7 +340,7 @@ export default function App() {
           );
 
           if (profile) {
-            // Restore from Firebase
+            // Restore local progression returned by the preference sync adapter
             setSoloProgress({
               chips: profile.chips,
               sweepstakesTickets: profile.sweepstakesTickets,
@@ -369,20 +369,11 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Save Progress
+  // Save progression locally only. Firestore client writes to balances/tickets/XP/levels
+  // remain disabled until the server-authoritative wallet ledger is deployed and enabled.
   useEffect(() => {
     localStorage.setItem('spades_solo_progress_v1', JSON.stringify(soloProgress));
-    if (currentUser) {
-      updateUserProfile(currentUser.uid, {
-        chips: soloProgress.chips,
-        sweepstakesTickets: soloProgress.sweepstakesTickets,
-        xp: soloProgress.xp,
-        level: soloProgress.level,
-        activeSweepstakesEntries: soloProgress.activeSweepstakesEntries,
-        streakDays: soloProgress.streakDays
-      }).catch(err => console.error("Cloud progress sync failed:", err));
-    }
-  }, [soloProgress, currentUser]);
+  }, [soloProgress]);
 
   // Save Avatar Selection
   useEffect(() => {
@@ -394,15 +385,10 @@ export default function App() {
     }
   }, [activeAvatar, currentUser]);
 
-  // Save Card Deck Style Selection
+  // Save card deck style locally. Unlock entitlements remain server-owned.
   useEffect(() => {
     localStorage.setItem('spades_active_deck_style_v1', activeDeckStyle);
-    if (currentUser) {
-      updateUserProfile(currentUser.uid, {
-        deckStyle: activeDeckStyle
-      }).catch(err => console.error("Cloud deck style sync failed:", err));
-    }
-  }, [activeDeckStyle, currentUser]);
+  }, [activeDeckStyle]);
 
   // Synchronize CSS custom properties with the active premium theme
   useEffect(() => {
@@ -426,8 +412,7 @@ export default function App() {
       setActiveDeckStyle(themeObj.cardBack);
       if (currentUser) {
         updateUserProfile(currentUser.uid, {
-          themeId: themeId,
-          deckStyle: themeObj.cardBack
+          themeId: themeId
         }).catch(err => console.error("Cloud theme sync failed:", err));
       }
     } else {
