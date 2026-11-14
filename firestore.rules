@@ -27,9 +27,9 @@ service cloud.firestore {
         && request.resource.data.themeId is string && request.resource.data.themeId.size() <= 64
         && request.resource.data.updatedAt is string;
     }
-    function validTrackerSession(data) {
+    function validTrackerSession(data, sessionId) {
       return data.userId == request.auth.uid
-        && data.id is string && data.id.size() <= 128
+        && isValidId(sessionId) && data.id == sessionId
         && data.teamAName is string && data.teamAName.size() >= 1 && data.teamAName.size() <= 64
         && data.teamBName is string && data.teamBName.size() >= 1 && data.teamBName.size() <= 64
         && data.teamAScore is number && data.teamAScore >= -10000 && data.teamAScore <= 10000
@@ -54,11 +54,11 @@ service cloud.firestore {
         allow create: if isOwner(userId) && isValidId(userId) && isValidId(sessionId)
           && request.resource.data.keys().hasAll(['id','userId','teamAName','teamAScore','teamABags','teamBName','teamBScore','teamBBags','winningScore','rounds','updatedAt','createdAt'])
           && request.resource.data.keys().size() == 12
-          && validTrackerSession(request.resource.data);
+          && validTrackerSession(request.resource.data, sessionId);
         allow update: if isOwner(userId) && isValidId(userId) && isValidId(sessionId)
-          && validTrackerSession(request.resource.data)
+          && validTrackerSession(request.resource.data, sessionId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['teamAScore','teamABags','teamBScore','teamBBags','rounds','updatedAt']);
-        allow delete: if isOwner(userId) && isValidId(userId);
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(sessionId);
       }
     }
     match /{document=**} { allow read, write: if false; }
