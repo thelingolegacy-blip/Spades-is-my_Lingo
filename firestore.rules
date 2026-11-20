@@ -1,56 +1,35 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper: Global default deny catch-all safety net
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // --- REUSABLE SECURITY PRIMITIVES ---
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
-
-    // Helper functions for validating payloads
-    function incoming() {
-      return request.resource.data;
-    }
-
-    function existing() {
-      return resource.data;
-    }
-
-    // --- ENTITY SCHEMAS & ATTRIBUTES ---
-    
-    // Schema verification for UserProfile
-    function isValidUserProfile(data) {
-      return data.uid == request.auth.uid
+    function validProfileCreate(data) {
+      return data.keys().hasAll(['uid','email','displayName','avatarId','themeId','deckStyle','purchasedDecks','updatedAt','createdAt'])
+        && data.keys().hasOnly(['uid','email','displayName','avatarId','themeId','deckStyle','purchasedDecks','updatedAt','createdAt'])
+        && data.keys().size() == 9
+        && data.uid == request.auth.uid
         && data.email is string && data.email.size() <= 256
-        && data.chips is number && data.chips >= 0 && data.chips <= 1000000000
-        && data.level is number && data.level >= 1 && data.level <= 1000
-        && data.xp is number && data.xp >= 0 && data.xp <= 10000000
-        && data.sweepstakesTickets is number && data.sweepstakesTickets >= 0
-        && data.streakDays is number && data.streakDays >= 0
+        && data.displayName is string && data.displayName.size() <= 80
         && data.avatarId is string && data.avatarId.size() <= 64
         && data.themeId is string && data.themeId.size() <= 64
-        && data.deckStyle is string && data.deckStyle.size() <= 64
-        && data.purchasedDecks is list
-        && data.purchasedDecks.size() <= 50;
+        && data.deckStyle == 'deck_classic'
+        && data.purchasedDecks is list && data.purchasedDecks.size() == 1
+        && data.purchasedDecks[0] == 'deck_classic'
+        && data.updatedAt is string && data.createdAt is string;
     }
-
-    // Schema verification for TrackerSession
-    function isValidTrackerSession(data) {
+    function validProfilePreferenceUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName','avatarId','themeId','updatedAt'])
+        && request.resource.data.displayName is string && request.resource.data.displayName.size() <= 80
+        && request.resource.data.avatarId is string && request.resource.data.avatarId.size() <= 64
+        && request.resource.data.themeId is string && request.resource.data.themeId.size() <= 64
+        && request.resource.data.updatedAt is string;
+    }
+    function validTrackerSession(data, sessionId) {
       return data.userId == request.auth.uid
-        && data.id is string && data.id.size() <= 128
+        && isValidId(sessionId) && data.id == sessionId
         && data.teamAName is string && data.teamAName.size() >= 1 && data.teamAName.size() <= 64
         && data.teamBName is string && data.teamBName.size() >= 1 && data.teamBName.size() <= 64
         && data.teamAScore is number && data.teamAScore >= -10000 && data.teamAScore <= 10000
@@ -58,56 +37,30 @@ service cloud.firestore {
         && data.teamABags is number && data.teamABags >= 0 && data.teamABags <= 10
         && data.teamBBags is number && data.teamBBags >= 0 && data.teamBBags <= 10
         && data.winningScore is number && data.winningScore >= 100 && data.winningScore <= 5000
-        && data.rounds is list && data.rounds.size() <= 100;
+        && data.rounds is list && data.rounds.size() <= 100
+        && data.updatedAt is string && data.createdAt is string;
     }
-
-    // --- COLLECTIONS ---
-
-    // 1. Users Profile Collection
     match /users/{userId} {
-      // Prevents id poisoning and ensures only owners can get or list
       allow get: if isOwner(userId) && isValidId(userId);
-      
-      // Strict list rules: No blanket scraping!
-      allow list: if isOwner(userId) && isValidId(userId);
-
-      allow create: if isOwner(userId) && isValidId(userId) 
-        && incoming().keys().hasAll(['uid', 'email', 'chips', 'level', 'xp', 'sweepstakesTickets', 'streakDays', 'avatarId', 'themeId', 'deckStyle', 'purchasedDecks', 'updatedAt', 'createdAt'])
-        && incoming().keys().size() == 13
-        && isValidUserProfile(incoming());
-
-      // Update rules: split by permitted updates (Actions) or strict full syncs
-      allow update: if isOwner(userId) && isValidId(userId)
-        && isValidUserProfile(incoming())
-        && (
-          // Action: Progression change (chips, tickets, level, xp, streak)
-          incoming().diff(existing()).affectedKeys().hasOnly(['chips', 'sweepstakesTickets', 'level', 'xp', 'streakDays', 'activeSweepstakesEntries', 'updatedAt']) ||
-          // Action: Cosmetics change (selected avatar, theme, deck skin)
-          incoming().diff(existing()).affectedKeys().hasOnly(['avatarId', 'themeId', 'deckStyle', 'updatedAt']) ||
-          // Action: Store Purchase (unlocked skins and deducted chips)
-          incoming().diff(existing()).affectedKeys().hasOnly(['purchasedDecks', 'chips', 'updatedAt']) ||
-          // Action: Full Synchronized Backup
-          incoming().diff(existing()).affectedKeys().hasOnly(['chips', 'sweepstakesTickets', 'level', 'xp', 'streakDays', 'activeSweepstakesEntries', 'avatarId', 'themeId', 'deckStyle', 'purchasedDecks', 'updatedAt'])
-        );
-
-      allow delete: if false; // Profiles cannot be deleted from the client for security
-
-      // 2. Scorekeeper sessions subcollection
+      allow list: if false;
+      // Clients create identity/preferences only. Economic state is server-owned.
+      allow create: if isOwner(userId) && isValidId(userId) && validProfileCreate(request.resource.data);
+      // Clients may update non-economic profile preferences only.
+      allow update: if isOwner(userId) && isValidId(userId) && validProfilePreferenceUpdate();
+      allow delete: if false;
       match /sessions/{sessionId} {
         allow get: if isOwner(userId) && isValidId(userId) && isValidId(sessionId);
         allow list: if isOwner(userId) && isValidId(userId);
-
         allow create: if isOwner(userId) && isValidId(userId) && isValidId(sessionId)
-          && incoming().keys().hasAll(['id', 'userId', 'teamAName', 'teamAScore', 'teamABags', 'teamBName', 'teamBScore', 'teamBBags', 'winningScore', 'rounds', 'updatedAt', 'createdAt'])
-          && incoming().keys().size() == 12
-          && isValidTrackerSession(incoming());
-
+          && request.resource.data.keys().hasAll(['id','userId','teamAName','teamAScore','teamABags','teamBName','teamBScore','teamBBags','winningScore','rounds','updatedAt','createdAt'])
+          && request.resource.data.keys().size() == 12
+          && validTrackerSession(request.resource.data, sessionId);
         allow update: if isOwner(userId) && isValidId(userId) && isValidId(sessionId)
-          && isValidTrackerSession(incoming())
-          && incoming().diff(existing()).affectedKeys().hasOnly(['teamAScore', 'teamABags', 'teamBScore', 'teamBBags', 'rounds', 'updatedAt']);
-
+          && validTrackerSession(request.resource.data, sessionId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['teamAScore','teamABags','teamBScore','teamBBags','rounds','updatedAt']);
         allow delete: if isOwner(userId) && isValidId(userId) && isValidId(sessionId);
       }
     }
+    match /{document=**} { allow read, write: if false; }
   }
 }
