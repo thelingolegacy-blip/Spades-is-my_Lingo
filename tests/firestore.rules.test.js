@@ -90,6 +90,50 @@ test('session document ID must match the session payload ID', async () => {
   }));
 });
 
+
+test('owner can update a scorecard session without changing its immutable createdAt', async () => {
+  const createdAt = '2026-11-10T00:00:00.000Z';
+  await testEnv.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), 'users/alice/sessions/session-1'), {
+      id: 'session-1', userId: 'alice',
+      teamAName: 'A', teamAScore: 0, teamABags: 0,
+      teamBName: 'B', teamBScore: 0, teamBBags: 0,
+      winningScore: 500, rounds: [],
+      updatedAt: '2026-11-11T00:00:00.000Z', createdAt
+    });
+  });
+
+  const alice = testEnv.authenticatedContext('alice').firestore();
+  const sessionRef = doc(alice, 'users/alice/sessions/session-1');
+  await assertSucceeds(updateDoc(sessionRef, {
+    teamAScore: 10,
+    updatedAt: '2026-11-11T01:00:00.000Z'
+  }));
+  const updated = await getDoc(sessionRef);
+  if (updated.data()?.createdAt !== createdAt) {
+    throw new Error('Scorecard session createdAt must remain unchanged after an update.');
+  }
+});
+
+test('owner cannot change a scorecard session createdAt value', async () => {
+  await testEnv.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), 'users/alice/sessions/session-1'), {
+      id: 'session-1', userId: 'alice',
+      teamAName: 'A', teamAScore: 0, teamABags: 0,
+      teamBName: 'B', teamBScore: 0, teamBBags: 0,
+      winningScore: 500, rounds: [],
+      updatedAt: '2026-11-11T00:00:00.000Z', createdAt: '2026-11-10T00:00:00.000Z'
+    });
+  });
+
+  const alice = testEnv.authenticatedContext('alice').firestore();
+  await assertFails(updateDoc(doc(alice, 'users/alice/sessions/session-1'), {
+    teamAScore: 10,
+    updatedAt: '2026-11-11T01:00:00.000Z',
+    createdAt: '2026-11-11T01:00:00.000Z'
+  }));
+});
+
 test('owner cannot delete a session with an invalid document ID', async () => {
   await testEnv.withSecurityRulesDisabled(async context => {
     await setDoc(doc(context.firestore(), 'users/alice/sessions/bad.id'), {
