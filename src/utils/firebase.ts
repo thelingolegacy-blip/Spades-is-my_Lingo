@@ -221,12 +221,22 @@ export async function saveScorecardSession(uid: string, session: Omit<ScorecardS
   try {
     const sessionDocRef = doc(db, 'users', uid, 'sessions', session.id);
     const timestamp = new Date().toISOString();
-    
+    const existingSnapshot = await getDoc(sessionDocRef);
+    let createdAt = timestamp;
+
+    if (existingSnapshot.exists()) {
+      const storedCreatedAt = existingSnapshot.data().createdAt;
+      if (typeof storedCreatedAt !== 'string' || storedCreatedAt.length === 0) {
+        throw new Error('Existing scorecard session is missing its immutable createdAt value.');
+      }
+      createdAt = storedCreatedAt;
+    }
+
     const completeSession: ScorecardSession = {
       ...session,
       userId: uid,
       updatedAt: timestamp,
-      createdAt: timestamp
+      createdAt
     };
 
     await setDoc(sessionDocRef, completeSession);
